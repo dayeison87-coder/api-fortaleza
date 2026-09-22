@@ -1,0 +1,52 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  security-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Auditoría de vulnerabilidades con npm audit
+        run: npm audit --audit-level=high
+
+      - name: Construir imagen Docker
+        run: docker build -t api-fortaleza-nube:${{ github.sha }} .
+
+      - name: Escaneo de seguridad con Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'api-fortaleza-nube:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  deploy:
+    needs: security-and-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Despliegue en AWS EC2 mediante SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/app && cd ~/app
+            git pull origin main || git clone https://github.com/${{ github.repository }}.git .
+            docker compose down || true
+            docker compose up -d --build
