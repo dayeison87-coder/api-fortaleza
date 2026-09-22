@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  api-node:
+    build: .
+    container_name: api-node-app
+    restart: unless-stopped
+    expose:
+      - "8080"
+    networks:
+      - internal-net
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    volumes:
+      - kuma-data:/app/data
+    expose:
+      - "3001"
+    networks:
+      - internal-net
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose:
+      - "8080"
+    networks:
+      - internal-net
+
+networks:
+  internal-net:
+    driver: bridge
+
+volumes:
+  kuma-data:

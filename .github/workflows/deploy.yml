@@ -39,14 +39,20 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Despliegue en AWS EC2 mediante SSH
+      - name: Despliegue en Oracle Cloud mediante SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            mkdir -p ~/app && cd ~/app
-            git pull origin main || git clone https://github.com/${{ github.repository }}.git .
+            mkdir -p ~/app
+            cd ~/app
+            if [ -d ".git" ]; then
+              git pull origin main
+            else
+              rm -rf * .[^.]*
+              git clone https://github.com/${{ github.repository }}.git .
+            fi
             docker compose down || true
             docker compose up -d --build
