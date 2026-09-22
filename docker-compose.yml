@@ -3,7 +3,7 @@ services:
   api-node:
     build: .
     container_name: api-node-app
-    restart: unless-stopped
+    restart: no
     expose:
       - "8080"
     networks:
